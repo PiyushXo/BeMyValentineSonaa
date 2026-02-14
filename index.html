@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Be My Valentine</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="modal-backdrop" id="heartBackdrop" aria-modal="true" role="dialog">
+      <div class="modal">
+        <p>Tap the heart to begin 💖</p>
+        <button class="heart-btn" id="heartStart" aria-label="Start">
+          <img src="heart.png" alt="Heart" />
+        </button>
+      </div>
+    </div>
+
+    <div class="modal-backdrop hidden" id="modalBackdrop" aria-modal="true" role="dialog">
+      <div class="modal">
+        <button class="close" id="closeModal" aria-label="Close">×</button>
+        <p
+          id="introText"
+          data-fulltext="This time i'm not gonna ask you to be my valentine, but instead you'll have to prove if you're worthy to be my valentine.."
+        ></p>
+        <button class="btn" id="worthyBtn">I am worthyyy</button>
+        <div class="status" id="statusText"></div>
+      </div>
+    </div>
+
+    <div class="modal-backdrop hidden" id="failBackdrop" aria-modal="true" role="dialog">
+      <div class="modal">
+        <p>
+          Woah Slow down player. I know you love me a lot but you failed to prove
+          it! Wanna try again?
+        </p>
+        <button class="btn" id="retryBtn">YEESS😭</button>
+      </div>
+    </div>
+
+    <div class="modal-backdrop hidden" id="typingFailBackdrop" aria-modal="true" role="dialog">
+      <div class="modal">
+        <p>Uh-Oh Too Slow. wanna try again?</p>
+        <button class="btn" id="typingRetryBtn">YEESS😭</button>
+      </div>
+    </div>
+
+    <div class="modal-backdrop hidden" id="finalBackdrop" aria-modal="true" role="dialog">
+      <div class="modal">
+        <p>
+          You've succesfully proved your worthiness warrior! and now you'reforever
+          obliged to be my Valentine! But wait there's more!!
+        </p>
+        <button class="btn" id="finalPlay">Tap me❤️</button>
+      </div>
+    </div>
+
+    <div class="modal-backdrop hidden" id="videoBackdrop" aria-modal="true" role="dialog">
+      <div class="modal video-modal">
+        <button class="close" id="videoDismiss" aria-label="Close">×</button>
+        <video id="valentineVideo" controls>
+          <source src="valentine.mp4" type="video/mp4" />
+          Your browser does not support the video tag.
+        </video>
+      </div>
+    </div>
+
+    <div class="modal-backdrop hidden" id="endScreen" aria-modal="true" role="dialog">
+      <div class="end-message">
+        <div class="end-title">Made with love</div>
+        <div class="end-subtitle">By aapka pyaara piyush❤️</div>
+      </div>
+    </div>
+
+    <div class="modal-backdrop hidden" id="puzzleWinBackdrop" aria-modal="true" role="dialog">
+      <div class="modal puzzle-win">
+        <button class="close center" id="puzzleDismiss" aria-label="Close">×</button>
+        <p>OMGG! You earned 25 Hearts❤️</p>
+      </div>
+    </div>
+
+    <main class="main" id="mainContent">
+      <header class="top-bar">
+        <div class="banner">Win 100 hearts to prove that you are worthy</div>
+        <div class="top-actions">
+          <button class="sound-toggle" id="soundToggle" aria-label="Enable music">
+            🔇
+          </button>
+          <div class="heart-counter" aria-live="polite">
+            ❤️ Hearts: <span id="heartCount">0</span>
+          </div>
+        </div>
+      </header>
+
+      <section class="games">
+        <div class="level-select">
+          <div class="level-header">SELECT GAME</div>
+          <div class="level-grid" role="list">
+            <button class="level-btn is-active" data-target="game-flappy" role="listitem">
+              1
+            </button>
+            <button class="level-btn" data-target="game-catch" role="listitem">2</button>
+            <button class="level-btn" data-target="game-typing" role="listitem">3</button>
+            <button class="level-btn" data-target="game-puzzle" role="listitem">4</button>
+          </div>
+        </div>
+
+        <div class="games-grid">
+          <article class="game-card active" id="game-flappy">
+            <div class="game-header">
+              <h2>Flappy Lovebird</h2>
+              <p>Tap/click or press space to fly like hoe ass bird.</p>
+            </div>
+            <div class="game-body">
+              <canvas id="flappyCanvas" width="320" height="480"></canvas>
+              <div class="game-controls">
+                <button class="btn" id="flappyStart">Start</button>
+                <button class="btn ghost" id="flappyReset">Retry</button>
+                <div class="game-score">Score: <span id="flappyScore">0</span></div>
+              </div>
+              <div class="difficulty">
+                <span>Difficulty:</span>
+                <input
+                  type="range"
+                  id="flappyDifficulty"
+                  min="1"
+                  max="3"
+                  step="1"
+                  value="2"
+                  aria-label="Flappy game difficulty"
+                />
+                <span class="difficulty-label" id="flappyDifficultyLabel">Medium</span>
+              </div>
+            </div>
+          </article>
+
+          <article class="game-card" id="game-catch">
+            <div class="game-header">
+              <h2>Catch My Hearts❤️</h2>
+              <p>Shake your ass and collect as many hearts as you can😘</p>
+            </div>
+            <div class="game-body">
+              <canvas id="catchCanvas" width="360" height="480"></canvas>
+              <div class="game-controls">
+                <button class="btn" id="catchStart">Start</button>
+                <button class="btn ghost" id="catchReset">Reset</button>
+                <div class="game-score">Score: <span id="catchScore">0</span></div>
+              </div>
+              <div class="difficulty">
+                <span>Difficulty:</span>
+                <input
+                  type="range"
+                  id="catchDifficulty"
+                  min="1"
+                  max="3"
+                  step="1"
+                  value="2"
+                  aria-label="Catch game difficulty"
+                />
+                <span class="difficulty-label" id="catchDifficultyLabel">Medium</span>
+              </div>
+              <p class="game-note">
+                Tip: Drag or move your mouse to steer your ass.
+              </p>
+            </div>
+          </article>
+
+          <article class="game-card typing-card" id="game-typing">
+            <div class="typing-ui">
+              <div class="typing-title">Bubu Love Letter Typing Simulator</div>
+              <div class="typing-stats">
+                <div class="typing-progress">
+                  <span id="typingProgressCurrent">0</span> /
+                  <span id="typingProgressTotal">0</span>
+                </div>
+                <div class="typing-metrics">
+                  WPM: <span id="typingWpm">0</span> /
+                  ACcuracy: <span id="typingAccuracy">0</span>%
+                </div>
+              </div>
+              <div class="typing-panel">
+                <div class="typing-letter" id="typingLetter">
+                  Stop looking at those flowers and keep trying! I love you more than anything, but 
+                  your WPM is currently embarassing us both. If you finish this without a typo, you 
+                  win my heart/throbbing dihh. If you fail, that kitty is forever mine.
+                  Speed up diva, my love for you is literally peaking! Kya badoo chalaegi!
+                </div>
+                <div class="typing-input-row">
+                  <input
+                    id="typingInput"
+                    class="typing-input"
+                    type="text"
+                    placeholder="Start typing here..."
+                  />
+                  <button class="btn typing-retry" id="typingReset">Restart</button>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <article class="game-card" id="game-puzzle">
+            <div class="game-header">
+              <h2>I know you hate me😭</h2>
+              <p>Slide the tiles to complete the picture.</p>
+            </div>
+            <div class="game-body">
+              <div class="puzzle-board" id="puzzleBoard"></div>
+              <div class="game-controls">
+                <button class="btn" id="puzzleShuffle">Shuffle</button>
+                <div class="game-score">Moves: <span id="puzzleMoves">0</span></div>
+              </div>
+            </div>
+          </article>
+        </div>
+      </section>
+    </main>
+
+    <div class="modal-backdrop hidden" id="typingBackdrop" aria-modal="true" role="dialog">
+      <div class="modal">
+        <p>
+          So i know your fingers works pretty fast on those dating apps! Let's see
+          how fast they work when you have to show how much you love me!
+          Huehuehue
+        </p>
+        <button class="btn" id="typingDismiss">Fine!</button>
+      </div>
+    </div>
+
+    <div class="modal-backdrop hidden" id="catchWinBackdrop" aria-modal="true" role="dialog">
+      <div class="modal">
+        <button class="close center" id="catchWinDismiss" aria-label="Close">×</button>
+        <p> Alright those were all the ❤️ i could give you..
+          Them fingers are soo good. Lemme Lick them👅</p>
+      </div>
+    </div>
+
+    <audio
+      id="bgMusic"
+      src="bgmusic.mp3"
+      loop
+      autoplay
+      muted
+      preload="auto"
+    ></audio>
+    <audio id="faahAudio" src="faah.mp3" preload="auto"></audio>
+    <audio id="ouchAudio" src="ouch.mp3" preload="auto"></audio>
+    <audio id="buttonClickAudio" src="buttonclick.mp3" preload="auto"></audio>
+    <audio id="gameSelectAudio" src="gameselect.mp3" preload="auto"></audio>
+    <audio id="heartPointAudio" src="heartpoint.mp3" preload="auto"></audio>
+    <script src="script.js" defer></script>
+  </body>
+</html>
