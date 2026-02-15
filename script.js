@@ -39,6 +39,7 @@ const puzzleShuffleBtn = document.getElementById("puzzleShuffle");
 const puzzleMovesEl = document.getElementById("puzzleMoves");
 const puzzleWinBackdrop = document.getElementById("puzzleWinBackdrop");
 const puzzleDismissBtn = document.getElementById("puzzleDismiss");
+const bannerEl = document.querySelector(".banner");
 const levelButtons = document.querySelectorAll(".level-btn[data-target]");
 const gameCards = document.querySelectorAll(".game-card");
 
@@ -194,12 +195,38 @@ document.addEventListener("click", (event) => {
   buttonClickAudio.play().catch(() => {});
 });
 
+if (bannerEl) {
+  const bannerOriginalText = bannerEl.textContent;
+  let bannerTapCount = 0;
+  let bannerCheatTimeoutId = null;
+  bannerEl.addEventListener("click", () => {
+    bannerTapCount += 1;
+    if (bannerTapCount >= 10) {
+      bannerTapCount = 0;
+      addHearts(100);
+      if (bannerCheatTimeoutId) {
+        clearTimeout(bannerCheatTimeoutId);
+      }
+      bannerEl.textContent = "Cheater!";
+      bannerCheatTimeoutId = setTimeout(() => {
+        bannerEl.textContent = bannerOriginalText;
+        bannerCheatTimeoutId = null;
+      }, 1000);
+    }
+  });
+}
+
 const setupTypingGame = () => {
   if (!typingLetterEl || !typingInputEl) {
     return;
   }
   const rawText = typingLetterEl.textContent.trim().replace(/\s+/g, " ");
   const words = rawText.split(" ");
+  const normalizeWord = (value) =>
+    value
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, "")
+      .trim();
   typingLetterEl.innerHTML = words
     .map((word) => `<span>${word}</span>`)
     .join(" ");
@@ -211,10 +238,11 @@ const setupTypingGame = () => {
   let lastCorrectCount = 0;
   let lastIncorrectCount = 0;
   let typingFailed = false;
+  let typingCompleted = false;
   let wpmTimerId = null;
 
   const updateTyping = () => {
-    if (typingFailed) {
+    if (typingFailed || typingCompleted) {
       return;
     }
     const inputWords = typingInputEl.value
@@ -253,7 +281,7 @@ const setupTypingGame = () => {
       if (typed === undefined) {
         return;
       }
-      if (typed === span.textContent) {
+      if (normalizeWord(typed) === normalizeWord(span.textContent)) {
         span.classList.add("correct");
         correct += 1;
       } else {
@@ -281,6 +309,15 @@ const setupTypingGame = () => {
       Math.min(totalTyped, totalWords)
     );
 
+    if (correct === totalWords && totalTyped >= totalWords) {
+      typingCompleted = true;
+      typingInputEl.disabled = true;
+      if (wpmTimerId) {
+        clearInterval(wpmTimerId);
+        wpmTimerId = null;
+      }
+    }
+
     if (typingStartTime) {
       const minutes = (Date.now() - typingStartTime) / 60000;
       const wpm = minutes > 0 ? Math.round(totalTyped / minutes) : 0;
@@ -306,6 +343,7 @@ const setupTypingGame = () => {
     lastCorrectCount = 0;
     lastIncorrectCount = 0;
     typingFailed = false;
+    typingCompleted = false;
     if (wpmTimerId) {
       clearInterval(wpmTimerId);
       wpmTimerId = null;
@@ -323,7 +361,7 @@ const setupPuzzleGame = () => {
   if (!puzzleBoard) {
     return;
   }
-  const size = 4;
+  const size = 3;
   const imageUrl = "puzzle-image.jpg";
   let tiles = [];
   let moves = 0;
@@ -679,6 +717,108 @@ const spawnPipe = () => {
   });
 };
 
+const BIRD_ALPHA_THRESHOLD = 20;
+const birdMaskCache = new Map();
+const buildCircleMask = (size) => {
+  const data = new Uint8ClampedArray(size * size * 4);
+  const radius = size / 2;
+  const center = radius - 0.5;
+  for (let y = 0; y < size; y += 1) {
+    for (let x = 0; x < size; x += 1) {
+      const dx = x - center;
+      const dy = y - center;
+      if (dx * dx + dy * dy <= radius * radius) {
+        const idx = (y * size + x) * 4;
+        data[idx + 3] = 255;
+      }
+    }
+  }
+  return { data, size };
+};
+const getBirdMask = (radius) => {
+  const size = Math.max(1, Math.round(radius * 2));
+  if (birdMaskCache.has(size)) {
+    return birdMaskCache.get(size);
+  }
+  const maskCanvas = document.createElement("canvas");
+  maskCanvas.width = size;
+  maskCanvas.height = size;
+  const maskCtx = maskCanvas.getContext("2d");
+  if (!maskCtx) {
+    const fallback = buildCircleMask(size);
+    birdMaskCache.set(size, fallback);
+    return fallback;
+  }
+  maskCtx.clearRect(0, 0, size, size);
+  if (birdImageReady) {
+    maskCtx.drawImage(birdImage, 0, 0, size, size);
+  } else {
+    maskCtx.fillStyle = "#000";
+    maskCtx.beginPath();
+    maskCtx.arc(size / 2, size / 2, size / 2, 0, Math.PI * 2);
+    maskCtx.fill();
+  }
+  let mask = null;
+  try {
+    const data = maskCtx.getImageData(0, 0, size, size).data;
+    mask = { data, size };
+  } catch (error) {
+    mask = buildCircleMask(size);
+  }
+  birdMaskCache.set(size, mask);
+  return mask;
+};
+
+const birdOverlapsRect = (bird, rect) => {
+  const mask = getBirdMask(bird.r);
+  const { data, size } = mask;
+  const birdLeft = bird.x - bird.r;
+  const birdTop = bird.y - bird.r;
+  const overlapLeft = Math.max(birdLeft, rect.x);
+  const overlapRight = Math.min(birdLeft + size, rect.x + rect.w);
+  const overlapTop = Math.max(birdTop, rect.y);
+  const overlapBottom = Math.min(birdTop + size, rect.y + rect.h);
+  if (overlapLeft >= overlapRight || overlapTop >= overlapBottom) {
+    return false;
+  }
+  for (let y = Math.floor(overlapTop); y < overlapBottom; y += 1) {
+    const by = Math.floor(y - birdTop);
+    const rowOffset = by * size * 4;
+    for (let x = Math.floor(overlapLeft); x < overlapRight; x += 1) {
+      const bx = Math.floor(x - birdLeft);
+      const alpha = data[rowOffset + bx * 4 + 3];
+      if (alpha > BIRD_ALPHA_THRESHOLD) {
+        return true;
+      }
+    }
+  }
+  return false;
+};
+
+const birdHitsBounds = (bird) => {
+  const mask = getBirdMask(bird.r);
+  const { data, size } = mask;
+  const birdTop = bird.y - bird.r;
+  const birdBottom = birdTop + size;
+  if (birdTop >= 0 && birdBottom <= flappySize.height) {
+    return false;
+  }
+  for (let by = 0; by < size; by += 1) {
+    const worldY = birdTop + by;
+    if (worldY >= 0 && worldY <= flappySize.height) {
+      continue;
+    }
+    const rowOffset = by * size * 4;
+    for (let bx = 0; bx < size; bx += 1) {
+      const alpha = data[rowOffset + bx * 4 + 3];
+      if (alpha > BIRD_ALPHA_THRESHOLD) {
+        return true;
+      }
+    }
+  }
+  return false;
+};
+
 const update = (delta) => {
   const bird = game.bird;
   bird.vy += config.gravity * delta;
@@ -695,7 +835,7 @@ const update = (delta) => {
   });
   game.pipes = game.pipes.filter((pipe) => pipe.x + config.pipeWidth > 0);
 
-  if (bird.y - bird.r <= 0 || bird.y + bird.r >= flappySize.height) {
+  if (birdHitsBounds(bird)) {
     crash();
   }
 
@@ -705,7 +845,14 @@ const update = (delta) => {
     if (inXRange) {
       const gapTop = pipe.gapCenter - config.pipeGap / 2;
       const gapBottom = pipe.gapCenter + config.pipeGap / 2;
-      if (bird.y - bird.r < gapTop || bird.y + bird.r > gapBottom) {
+      const topPipe = { x: pipe.x, y: 0, w: config.pipeWidth, h: gapTop };
+      const bottomPipe = {
+        x: pipe.x,
+        y: gapBottom,
+        w: config.pipeWidth,
+        h: flappySize.height - gapBottom,
+      };
+      if (birdOverlapsRect(bird, topPipe) || birdOverlapsRect(bird, bottomPipe)) {
         if (ouchAudio) {
           ouchAudio.currentTime = 0;
           ouchAudio.play().catch(() => {});
@@ -894,6 +1041,7 @@ const resetCatch = (deductHearts = false) => {
   catchGame.cacti = [];
   catchGame.spawnTimer = 0;
   catchGame.bowl.x = catchSize.width / 2;
+  catchGame.bowl.y = catchSize.height - 40;
   catchScoreEl.textContent = "0";
   drawCatch();
 };
@@ -1165,8 +1313,15 @@ if (valentineVideo) {
 
 
 const resizeCanvas = (canvasEl, context, sizeObj) => {
-  const displayWidth = Math.max(1, Math.floor(canvasEl.clientWidth));
-  const displayHeight = Math.max(1, Math.floor(canvasEl.clientHeight));
+  const rect = canvasEl.getBoundingClientRect();
+  let displayWidth = Math.max(1, Math.floor(rect.width));
+  let displayHeight = Math.max(1, Math.floor(rect.height));
+  if (displayHeight <= 1) {
+    const nativeWidth = Number(canvasEl.getAttribute("width")) || 1;
+    const nativeHeight = Number(canvasEl.getAttribute("height")) || 1;
+    const ratio = nativeHeight / nativeWidth;
+    displayHeight = Math.max(1, Math.round(displayWidth * ratio));
+  }
   sizeObj.width = displayWidth;
   sizeObj.height = displayHeight;
   const dpr = window.devicePixelRatio || 1;
